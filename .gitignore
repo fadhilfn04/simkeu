@@ -1,0 +1,11 @@
+.env
+.env.*
+node_modules
+dist
+build
+__pycache__
+*.log
+*.swp
+.DS_Store
+coverage
+vendor
