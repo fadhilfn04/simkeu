@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  # Shared PostgreSQL Database
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: simkeu
+      POSTGRES_PASSWORD: simkeu123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simkeu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - simkeu-network
+
+  # Auth Service
+  auth:
+    build: ./services/auth
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_auth
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Blockchain Service
+  blockchain:
+    build: ./services/blockchain
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_blockchain
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Debitur Service
+  debitur:
+    build: ./services/debitur
+    ports:
+      - "8082:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_debitur
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Log Service
+  log:
+    build: ./services/log
+    ports:
+      - "8083:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_log
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Master Service
+  master:
+    build: ./services/master
+    ports:
+      - "8084:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_master
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Payment Service
+  payment:
+    build: ./services/payment
+    ports:
+      - "8085:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_payment
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Piutang Service
+  piutang:
+    build: ./services/piutang
+    ports:
+      - "8086:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_piutang
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Realisasi Service
+  realisasi:
+    build: ./services/realisasi
+    ports:
+      - "8087:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_realisasi
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+  # Tagihan Service
+  tagihan:
+    build: ./services/tagihan
+    ports:
+      - "8088:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: simkeu
+      DB_PASSWORD: simkeu123
+      DB_NAME: simkeu_tagihan
+      JWT_SECRET: fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584
+      APP_PORT: 8080
+    networks:
+      - simkeu-network
+
+volumes:
+  postgres_data:
+
+networks:
+  simkeu-network:
+    driver: bridge
