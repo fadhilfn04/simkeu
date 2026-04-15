@@ -3,50 +3,16 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"simkeu/service-payment/internal/database"
 	"simkeu/service-payment/internal/handler"
 	"simkeu/service-payment/internal/repository"
 	"simkeu/service-payment/internal/service"
+	"simkeu/service-payment/internal/middleware"
 )
 
 func main() {
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET not set")
-	}
-
-	authMiddleware := func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-
-		if authHeader == "" {
-			c.JSON(401, gin.H{"error": "Authorization header required"})
-			c.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(jwtSecret), nil
-		})
-
-		if err != nil || !token.Valid {
-			c.JSON(401, gin.H{"error": "Invalid or expired token"})
-			c.Abort()
-			return
-		}
-
-		claims := token.Claims.(jwt.MapClaims)
-
-		c.Set("user_id", claims["user_id"])
-		c.Set("email", claims["email"])
-
-		c.Next()
-	}
 
 	// =====================
 	// Database Connection
@@ -54,7 +20,6 @@ func main() {
 	db := database.Connect()
 	defer db.Close()
 
-	// Create tables if they don't exist
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS payments (
 		id SERIAL PRIMARY KEY,
@@ -94,7 +59,7 @@ func main() {
 
 	// Protected routes
 	protected := router.Group("/api")
-	protected.Use(authMiddleware)
+	protected.Use(middleware.JWTMiddleware())
 	{
 		protected.GET("/status", paymentHandler.GetStatus)
 	}

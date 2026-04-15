@@ -16,8 +16,9 @@ func main() {
 
 	userRepo := &repository.UserRepository{DB: db}
 	authService := &service.AuthService{
-		Repo:      userRepo,
-		JWTSecret: os.Getenv("JWT_SECRET"),
+		Repo:       userRepo,
+		JWTSecret:  os.Getenv("JWT_SECRET"),
+		DebiturURL: os.Getenv("DEBITUR_SERVICE_URL"),
 	}
 	authHandler := &handler.AuthHandler{
 		Service: authService,
@@ -27,6 +28,7 @@ func main() {
 
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
+	r.GET("/validate", authHandler.Validate)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})

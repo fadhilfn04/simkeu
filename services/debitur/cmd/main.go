@@ -97,6 +97,8 @@ func main() {
 	protected.Use(authMiddleware)
 	{
 		protected.GET("/status", debiturHandler.GetStatus)
+		protected.GET("/debitur/:id", debiturHandler.GetByID)
+		router.POST("/debitur", debiturHandler.Create)
 	}
 
 	log.Printf("Debitur service running on port %s\n", port)

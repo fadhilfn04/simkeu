@@ -1,9 +1,17 @@
 version: '3.8'
 
+x-common-env: &common-env
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_USER: simkeu
+  DB_PASSWORD: ${POSTGRES_PASSWORD}
+  JWT_SECRET: ${JWT_SECRET}
+  APP_PORT: 8080
+
 services:
-  # Shared PostgreSQL Database
   db:
     image: postgres:15
+    container_name: simkeu-db
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -12,177 +20,134 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U simkeu"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - simkeu-network
 
-  # Auth Service
   auth:
     build: ./services/auth
+    container_name: simkeu-auth
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_auth
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
+      DEBITUR_SERVICE_URL: http://debitur:8080
     networks:
       - simkeu-network
 
-  # Blockchain Service
   blockchain:
     build: ./services/blockchain
+    container_name: simkeu-blockchain
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_blockchain
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Debitur Service
   debitur:
     build: ./services/debitur
+    container_name: simkeu-debitur
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_debitur
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Log Service
   log:
     build: ./services/log
+    container_name: simkeu-log
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_log
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Master Service
   master:
     build: ./services/master
+    container_name: simkeu-master
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_master
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Payment Service
   payment:
     build: ./services/payment
+    container_name: simkeu-payment
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_payment
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Piutang Service
   piutang:
     build: ./services/piutang
+    container_name: simkeu-piutang
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_piutang
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Realisasi Service
   realisasi:
     build: ./services/realisasi
+    container_name: simkeu-realisasi
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_realisasi
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
-  # Tagihan Service
   tagihan:
     build: ./services/tagihan
+    container_name: simkeu-tagihan
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: simkeu
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      <<: *common-env
       DB_NAME: simkeu_tagihan
-      JWT_SECRET: ${JWT_SECRET}
-      APP_PORT: 8080
     networks:
       - simkeu-network
 
   nginx:
     image: nginx:alpine
+    container_name: simkeu-nginx
     ports:
       - "80:80"
       - "443:443"
