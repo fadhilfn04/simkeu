@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: realisasi-secret
+  namespace: simkeu
+type: Opaque
+stringData:
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_USER: "simkeu"
+  DB_PASSWORD: "supersecurepassword"
+  DB_NAME: "simkeu_realisasi"
+  JWT_SECRET: "fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584"
+  APP_PORT: "8080"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realisasi
+  namespace: simkeu
+  labels:
+    app: realisasi
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: realisasi
+  template:
+    metadata:
+      labels:
+        app: realisasi
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      imagePullSecrets:
+        - name: gitlab-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: realisasi
+          image: registry.gitlab.com/REPLACE_GITLAB_PROJECT/realisasi:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: realisasi-secret
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: realisasi
+  namespace: simkeu
+  labels:
+    app: realisasi
+spec:
+  selector:
+    app: realisasi
+  ports:
+    - port: 8080
+      targetPort: 8080

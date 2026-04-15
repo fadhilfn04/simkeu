@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"simkeu/service-log/internal/database"
 	"simkeu/service-log/internal/handler"
 	"simkeu/service-log/internal/repository"
@@ -86,11 +87,13 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Public routes
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Log service is healthy"})
 	})
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Protected routes
 	protected := router.Group("/api")

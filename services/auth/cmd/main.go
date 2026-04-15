@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"simkeu/service-auth/internal/database"
 	"simkeu/service-auth/internal/handler"
 	"simkeu/service-auth/internal/repository"
@@ -25,6 +26,7 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.SetTrustedProxies(nil)
 
 	r.POST("/register", authHandler.Register)
 	r.POST("/login", authHandler.Login)
@@ -33,6 +35,8 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	port := os.Getenv("APP_PORT")
 	if port == "" {

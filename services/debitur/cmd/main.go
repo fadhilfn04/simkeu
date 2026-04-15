@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"simkeu/service-debitur/internal/database"
 	"simkeu/service-debitur/internal/handler"
 	"simkeu/service-debitur/internal/repository"
@@ -86,11 +87,13 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Public routes
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Debitur service is healthy"})
 	})
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Protected routes
 	protected := router.Group("/api")
@@ -98,7 +101,7 @@ func main() {
 	{
 		protected.GET("/status", debiturHandler.GetStatus)
 		protected.GET("/debitur/:id", debiturHandler.GetByID)
-		router.POST("/debitur", debiturHandler.Create)
+		protected.POST("/debitur", debiturHandler.Create)
 	}
 
 	log.Printf("Debitur service running on port %s\n", port)

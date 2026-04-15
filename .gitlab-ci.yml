@@ -1,0 +1,182 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  KUBE_NAMESPACE: simkeu
+  REGISTRY: $CI_REGISTRY
+
+# ─────────────────────────────────────────────
+# Build & Push template (reused by all services)
+# ─────────────────────────────────────────────
+.build_push: &build_push
+  stage: build
+  image: docker:27
+  services:
+    - name: docker:27-dind
+      alias: docker
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - |
+      IMAGE="$CI_REGISTRY_IMAGE/$SERVICE_NAME"
+      docker build \
+        --cache-from "$IMAGE:latest" \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -t "$IMAGE:$CI_COMMIT_SHORT_SHA" \
+        -t "$IMAGE:latest" \
+        "services/$SERVICE_NAME"
+      docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
+      docker push "$IMAGE:latest"
+  rules:
+    - changes:
+        - "services/$SERVICE_NAME/**/*"
+        - .gitlab-ci.yml
+
+# ─────────────────────────────────────────────
+# Deploy template
+# (runs on a GitLab Runner installed on your server)
+# ─────────────────────────────────────────────
+.deploy: &deploy
+  stage: deploy
+  tags:
+    - self-hosted
+  script:
+    - |
+      kubectl set image deployment/$SERVICE_NAME \
+        $SERVICE_NAME="$CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA" \
+        -n $KUBE_NAMESPACE
+      kubectl rollout status deployment/$SERVICE_NAME -n $KUBE_NAMESPACE --timeout=120s
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - "services/$SERVICE_NAME/**/*"
+        - .gitlab-ci.yml
+
+# ─────────────────────────────────────────────
+# Auth Service
+# ─────────────────────────────────────────────
+build:auth:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: auth
+
+deploy:auth:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: auth
+  needs: [build:auth]
+
+# ─────────────────────────────────────────────
+# Blockchain Service
+# ─────────────────────────────────────────────
+build:blockchain:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: blockchain
+
+deploy:blockchain:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: blockchain
+  needs: [build:blockchain]
+
+# ─────────────────────────────────────────────
+# Debitur Service
+# ─────────────────────────────────────────────
+build:debitur:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: debitur
+
+deploy:debitur:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: debitur
+  needs: [build:debitur]
+
+# ─────────────────────────────────────────────
+# Log Service
+# ─────────────────────────────────────────────
+build:log:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: log
+
+deploy:log:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: log
+  needs: [build:log]
+
+# ─────────────────────────────────────────────
+# Master Service
+# ─────────────────────────────────────────────
+build:master:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: master
+
+deploy:master:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: master
+  needs: [build:master]
+
+# ─────────────────────────────────────────────
+# Payment Service
+# ─────────────────────────────────────────────
+build:payment:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: payment
+
+deploy:payment:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: payment
+  needs: [build:payment]
+
+# ─────────────────────────────────────────────
+# Piutang Service
+# ─────────────────────────────────────────────
+build:piutang:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: piutang
+
+deploy:piutang:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: piutang
+  needs: [build:piutang]
+
+# ─────────────────────────────────────────────
+# Realisasi Service
+# ─────────────────────────────────────────────
+build:realisasi:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: realisasi
+
+deploy:realisasi:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: realisasi
+  needs: [build:realisasi]
+
+# ─────────────────────────────────────────────
+# Tagihan Service
+# ─────────────────────────────────────────────
+build:tagihan:
+  <<: *build_push
+  variables:
+    SERVICE_NAME: tagihan
+
+deploy:tagihan:
+  <<: *deploy
+  variables:
+    SERVICE_NAME: tagihan
+  needs: [build:tagihan]

@@ -5,11 +5,12 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"simkeu/service-payment/internal/database"
 	"simkeu/service-payment/internal/handler"
+	"simkeu/service-payment/internal/middleware"
 	"simkeu/service-payment/internal/repository"
 	"simkeu/service-payment/internal/service"
-	"simkeu/service-payment/internal/middleware"
 )
 
 func main() {
@@ -51,11 +52,13 @@ func main() {
 	}
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Public routes
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Payment service is healthy"})
 	})
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Protected routes
 	protected := router.Group("/api")

@@ -1,0 +1,254 @@
+---
+# Kong declarative config (DB-less mode)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: simkeu
+data:
+  kong.yaml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+      - name: auth-service
+        url: http://auth.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: auth-routes
+            paths:
+              - /auth
+            strip_path: true
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+
+      - name: blockchain-service
+        url: http://blockchain.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: blockchain-routes
+            paths:
+              - /blockchain
+            strip_path: true
+
+      - name: debitur-service
+        url: http://debitur.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: debitur-routes
+            paths:
+              - /debitur
+            strip_path: true
+
+      - name: log-service
+        url: http://log.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: log-routes
+            paths:
+              - /log
+            strip_path: true
+
+      - name: master-service
+        url: http://master.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: master-routes
+            paths:
+              - /master
+            strip_path: true
+
+      - name: payment-service
+        url: http://payment.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: payment-routes
+            paths:
+              - /payment
+            strip_path: true
+
+      - name: piutang-service
+        url: http://piutang.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: piutang-routes
+            paths:
+              - /piutang
+            strip_path: true
+
+      - name: realisasi-service
+        url: http://realisasi.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: realisasi-routes
+            paths:
+              - /realisasi
+            strip_path: true
+
+      - name: tagihan-service
+        url: http://tagihan.simkeu.svc.cluster.local:8080
+        connect_timeout: 5000
+        read_timeout: 10000
+        routes:
+          - name: tagihan-routes
+            paths:
+              - /tagihan
+            strip_path: true
+
+    plugins:
+      # Global rate limiting (100 req/min per IP)
+      - name: rate-limiting
+        config:
+          minute: 100
+          hour: 2000
+          policy: local
+          fault_tolerant: true
+
+      # Global CORS
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+            - PATCH
+          headers:
+            - Authorization
+            - Content-Type
+            - Accept
+            - X-Requested-With
+          exposed_headers:
+            - X-Auth-Token
+          max_age: 3600
+          credentials: true
+
+      # Prometheus metrics for Kong itself
+      - name: prometheus
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kong-secret
+  namespace: simkeu
+type: Opaque
+stringData:
+  # Used by Kong's JWT plugin if you later enable per-route JWT validation
+  JWT_SECRET: "fa814aa8880fd13b72fc568618a8e339146546ae9c24c91e66ee35d360dd9584"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: simkeu
+  labels:
+    app: kong
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.9-alpine
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: "/kong/config/kong.yaml"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_PROXY_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000"
+            - name: KONG_PLUGINS
+              value: "bundled"
+          ports:
+            - name: proxy
+              containerPort: 8000
+            - name: admin
+              containerPort: 8001
+          volumeMounts:
+            - name: kong-config
+              mountPath: /kong/config
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: kong-config
+          configMap:
+            name: kong-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong
+  namespace: simkeu
+  labels:
+    app: kong
+spec:
+  type: LoadBalancer
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: 8000
+    - name: proxy-ssl
+      port: 443
+      targetPort: 8443
+    - name: admin
+      port: 8001
+      targetPort: 8001

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespace (apply first)
+  - 00-namespace.yaml
+
+  # Database
+  - postgres.yaml
+
+  # Application services
+  - services/auth.yaml
+  - services/blockchain.yaml
+  - services/debitur.yaml
+  - services/log.yaml
+  - services/master.yaml
+  - services/payment.yaml
+  - services/piutang.yaml
+  - services/realisasi.yaml
+  - services/tagihan.yaml
+
+  # API Gateway
+  - gateway/kong.yaml
+
+  # Monitoring
+  - monitoring/prometheus.yaml
+  - monitoring/grafana.yaml
+
+  # Object Storage
+  - storage/minio.yaml
